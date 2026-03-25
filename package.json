@@ -13,13 +13,19 @@
     "type": "git",
     "url": "https://github.com/Infinite-Star-Studios/SaturnAgentSDK"
   },
-  "keywords": ["phantasma", "saturn", "dex", "agent", "sdk"],
+  "keywords": [
+    "phantasma",
+    "saturn",
+    "dex",
+    "agent",
+    "sdk"
+  ],
   "license": "MIT",
-  "dependencies": {
-    "phantasma-ts": "^0.1.70"
-  },
   "devDependencies": {
-    "typescript": "^5.4.0",
-    "@types/node": "^20.0.0"
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "phantasma-sdk-ts": "^0.5.1"
   }
 }

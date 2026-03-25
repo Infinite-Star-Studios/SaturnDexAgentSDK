@@ -30,7 +30,7 @@ export class TransactionBroadcaster {
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        const { PhantasmaAPI } = await import("phantasma-ts");
+        const { PhantasmaAPI } = await import("phantasma-sdk-ts");
         const api = new PhantasmaAPI(
           this.config.phantasmaRpcUrl,
           "",
@@ -64,7 +64,7 @@ export class TransactionBroadcaster {
     txHash: string,
     maxWaitSeconds = 60
   ): Promise<BroadcastResult> {
-    const { PhantasmaAPI } = await import("phantasma-ts");
+    const { PhantasmaAPI } = await import("phantasma-sdk-ts");
     const api = new PhantasmaAPI(
       this.config.phantasmaRpcUrl,
       "",

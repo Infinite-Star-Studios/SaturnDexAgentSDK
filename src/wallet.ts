@@ -24,7 +24,7 @@ export class AgentWallet {
    * Requires phantasma-ts to be available at runtime.
    */
   static async generate(): Promise<AgentWallet> {
-    const { PhantasmaKeys } = await import("phantasma-ts");
+    const { PhantasmaKeys } = await import("phantasma-sdk-ts");
     const keys = PhantasmaKeys.generate();
     const wif = keys.toWIF();
     const address = keys.Address.Text;
@@ -35,7 +35,7 @@ export class AgentWallet {
    * Import a wallet from a WIF (Wallet Import Format) private key.
    */
   static async fromWIF(wif: string): Promise<AgentWallet> {
-    const { PhantasmaKeys } = await import("phantasma-ts");
+    const { PhantasmaKeys } = await import("phantasma-sdk-ts");
     const keys = PhantasmaKeys.fromWIF(wif);
     const address = keys.Address.Text;
     return new AgentWallet(wif, address);
@@ -103,7 +103,7 @@ export class AgentWallet {
    * Returns hex-encoded signature.
    */
   async signData(hexData: string): Promise<string> {
-    const { PhantasmaKeys } = await import("phantasma-ts");
+    const { PhantasmaKeys } = await import("phantasma-sdk-ts");
     const keys = PhantasmaKeys.fromWIF(this.wif);
     const msgBytes = Uint8Array.from(
       hexData.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))

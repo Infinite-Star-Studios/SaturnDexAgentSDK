@@ -24,7 +24,7 @@ export class TransactionSigner {
     wif: string,
     expirationSeconds = 300
   ): Promise<string> {
-    const { Transaction } = await import("phantasma-ts");
+    const { Transaction } = await import("phantasma-sdk-ts");
 
     const { script } = swapResponse.transaction;
 
