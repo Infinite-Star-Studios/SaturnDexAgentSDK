@@ -1,0 +1,25 @@
+{
+  "name": "saturn-agent-sdk",
+  "version": "0.1.0",
+  "description": "SDK for AI agents to autonomously swap tokens on Phantasma via Saturn DEX",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "lint": "eslint src/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Infinite-Star-Studios/SaturnAgentSDK"
+  },
+  "keywords": ["phantasma", "saturn", "dex", "agent", "sdk"],
+  "license": "MIT",
+  "dependencies": {
+    "phantasma-ts": "^0.1.70"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0"
+  }
+}
