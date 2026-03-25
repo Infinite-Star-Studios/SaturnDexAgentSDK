@@ -1,3 +1,5 @@
+// ── Network Configuration ──
+
 /** Network configuration */
 export interface NetworkConfig {
   /** "testnet" for devnet, "mainnet" for production */
@@ -20,73 +22,270 @@ export const MAINNET_CONFIG: NetworkConfig = {
   phantasmaRpcUrl: "https://mainnet.phantasma.info/rpc",
 };
 
-/** Token metadata from Saturn API */
+// ── GET /api/v1/health ──
+
+export interface HealthResponse {
+  status: "healthy" | "degraded";
+  version: string;
+  chain: {
+    name: string;
+    nexus: string;
+    rpc: string;
+    connected: boolean;
+    latencyMs: number;
+    blockHeight: number;
+    error?: string;
+  };
+  dex: {
+    contract: string;
+    name: string;
+  };
+  timestamp: string;
+}
+
+// ── GET /api/v1/tokens ──
+
 export interface TokenInfo {
   symbol: string;
   name: string;
   decimals: number;
+  maxSupply: string;
+  icon: string;
+  url: string;
+  metadata: Record<string, unknown>;
 }
 
-/** Price entry from Saturn API */
-export interface TokenPrice {
-  symbol: string;
-  price: number;
+export interface TokenListResponse {
+  tokens: TokenInfo[];
+  count: number;
+  knownSymbols: string[];
 }
 
-/** A single hop in a swap route */
-export interface RouteHop {
-  tokenIn: string;
-  tokenOut: string;
-  pool: string;
+export interface TokenSingleResponse {
+  token: TokenInfo;
 }
 
-/** Quote response from GET /quote */
+// ── GET /api/v1/quote ──
+
+export interface FeeLeg {
+  leg: string;
+  percent: number;
+}
+
+export interface FeeInfo {
+  legs: FeeLeg[];
+  totalPercent: number;
+  description: string;
+}
+
 export interface QuoteResponse {
-  tokenIn: string;
-  tokenOut: string;
-  amountIn: number;
-  amountOut: number;
-  route: RouteHop[];
-  hops: number;
-  fee: {
-    totalPercent: number;
+  quote: {
+    tokenIn: string;
+    tokenOut: string;
+    amountIn: string;
+    amountOut: string;
+    rawAmountIn: string;
+    rawAmountOut: string;
+    rate: string;
+    reverseRate: string;
+    route: string[];
+    hops: number;
   };
-  priceImpact: number;
+  fee: FeeInfo;
+  priceImpact: string;
+  tokens: Record<string, { name: string; decimals: number }>;
+  routeComparison?: {
+    alternativeRoute?: string[];
+    alternativeOutput?: string;
+    directAdvantage?: string;
+    directOutput?: string;
+    routeAdvantage?: string;
+  };
 }
 
-/** Gas estimate from GET /gas */
-export interface GasEstimate {
-  operation: string;
-  hops: number;
-  estimatedKCAL: number;
-  gasPrice: number;
-  gasLimit: number;
-}
+// ── GET /api/v1/swap ──
 
-/** Unsigned transaction from GET /swap */
 export interface SwapResponse {
   transaction: {
     script: string;
+    scriptBase64: string;
+    label: string;
     gasPrice: number;
     gasLimit: number;
+    instructions: string;
   };
-  quote: QuoteResponse;
+  quote: {
+    tokenIn: string;
+    tokenOut: string;
+    amountIn: string;
+    amountOut: string;
+    rawAmountIn: string;
+    rawAmountOut: string;
+    rate: string;
+    slippage: number;
+    route: string[];
+    hops: number;
+    fee: {
+      legs: FeeLeg[];
+      totalPercent: number;
+    };
+  };
 }
 
-/** Portfolio balance entry */
-export interface PortfolioBalance {
+// ── GET /api/v1/prices ──
+
+export interface PriceEntry {
   symbol: string;
-  amount: number;
+  price: string;
+  base: string;
+  pool: string;
+  reserves: {
+    tokenA: string;
+    tokenB: string;
+  };
+}
+
+export interface PricesResponse {
+  prices: PriceEntry[];
+  base: string;
+  count: number;
+  timestamp: string;
+}
+
+// ── GET /api/v1/pools ──
+
+export interface PoolReserve {
+  raw: string;
+  amount: string;
   decimals: number;
 }
 
-/** Portfolio response from GET /portfolio */
-export interface PortfolioResponse {
-  address: string;
-  balances: PortfolioBalance[];
+export interface PoolEntry {
+  poolKey: string;
+  tokenA: string;
+  tokenB: string;
+  reserves: Record<string, PoolReserve>;
 }
 
-/** Safety thresholds for the agent */
+export interface PoolsResponse {
+  pools: PoolEntry[];
+  count: number;
+  totalPoolKeys: number;
+  uniquePools: number;
+}
+
+// ── GET /api/v1/portfolio ──
+
+export interface FungibleBalance {
+  symbol: string;
+  amount: string;
+  rawAmount: string;
+  decimals: number;
+  chain: string;
+}
+
+export interface NftBalance {
+  symbol: string;
+  amount: string;
+  rawAmount: string;
+  decimals: number;
+  chain: string;
+  nftIds: string[];
+  nftCount: number;
+}
+
+export interface PortfolioResponse {
+  address: string;
+  name: string | null;
+  stake: string;
+  unclaimed: string;
+  balances: {
+    fungible: FungibleBalance[];
+    nfts: NftBalance[];
+    totalTokens: number;
+  };
+  timestamp: string;
+}
+
+// ── GET /api/v1/gas ──
+
+export interface GasOperation {
+  name: string;
+  gasLimit: number;
+  estimatedKCAL: string;
+  description: string;
+}
+
+export interface GasResponse {
+  gas: {
+    operation: string;
+    description: string;
+    gasPrice: number;
+    gasLimit: number;
+    totalGasCost: string;
+    estimatedKCAL: string;
+    hops?: number;
+    note?: string;
+  };
+  token: {
+    symbol: string;
+    name: string;
+    decimals: number;
+    role: string;
+  };
+  operations: GasOperation[];
+}
+
+// ── GET /api/v1/nfts ──
+
+export interface NftAttributes {
+  accessory: string;
+  background: string;
+  eyeColor: string;
+  hairColor: string;
+  hairDecoration: string;
+  hairStyle: string;
+  orientation: string;
+  outfit: string;
+  skinColor: string;
+}
+
+export interface NftItem {
+  id: string;
+  mint: number;
+  name: string;
+  imageURL: string;
+  description: string;
+  attributes: NftAttributes;
+  rarity: {
+    tier: string;
+    rank: number;
+    score: number;
+  };
+}
+
+export interface NftsListResponse {
+  nfts: NftItem[];
+  collection: {
+    name: string;
+    symbol: string;
+    totalSupply: number;
+    rarityTiers: string[];
+  };
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
+}
+
+export interface NftSingleResponse {
+  nft: NftItem;
+}
+
+// ── Safety Configuration ──
+
 export interface SafetyConfig {
   /** Max allowed price impact percentage (default: 5) */
   maxPriceImpact: number;
@@ -111,12 +310,13 @@ export const DEFAULT_SAFETY_CONFIG: SafetyConfig = {
   maxRequestsPerMinute: 120,
 };
 
-/** Result of a completed swap */
+// ── Swap Result ──
+
 export interface SwapResult {
   txHash: string;
   tokenIn: string;
   tokenOut: string;
-  amountIn: number;
-  amountOut: number;
+  amountIn: string;
+  amountOut: string;
   status: "confirmed" | "failed" | "pending";
 }

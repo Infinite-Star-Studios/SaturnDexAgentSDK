@@ -1,4 +1,4 @@
-import { NetworkConfig, SwapResponse } from "./types";
+import { NetworkConfig, SwapResponse } from "./types.js";
 
 /**
  * Signs unsigned transactions returned by the Saturn /swap endpoint.

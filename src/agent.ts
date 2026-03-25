@@ -1,8 +1,8 @@
-import { AgentWallet } from "./wallet";
-import { SaturnClient } from "./client";
-import { TransactionSigner } from "./signer";
-import { TransactionBroadcaster } from "./broadcaster";
-import { SafetyGuard, SafetyError } from "./safety";
+import { AgentWallet } from "./wallet.js";
+import { SaturnClient } from "./client.js";
+import { TransactionSigner } from "./signer.js";
+import { TransactionBroadcaster } from "./broadcaster.js";
+import { SafetyGuard, SafetyError } from "./safety.js";
 import {
   NetworkConfig,
   SafetyConfig,
@@ -11,7 +11,7 @@ import {
   PortfolioResponse,
   TokenInfo,
   DEVNET_CONFIG,
-} from "./types";
+} from "./types.js";
 
 export interface AgentConfig {
   /** Network configuration (defaults to devnet) */
@@ -76,7 +76,7 @@ export class SaturnAgent {
   }
 
   /**
-   * Execute a full swap: quote → safety checks → build TX → sign → broadcast → confirm.
+   * Execute a full swap: quote -> safety checks -> build TX -> sign -> broadcast -> confirm.
    *
    * @param tokenIn Source token symbol (e.g. "SOUL")
    * @param tokenOut Destination token symbol (e.g. "KCAL")
@@ -97,7 +97,10 @@ export class SaturnAgent {
     const quoteResult = await this.client.getQuote(tokenIn, tokenOut, amount);
 
     // Step 2: Estimate gas
-    const gasEstimate = await this.client.getGasEstimate(quoteResult.hops);
+    const gasResponse = await this.client.getGasEstimate(
+      "swap",
+      quoteResult.quote.hops
+    );
 
     // Step 3: Get portfolio for safety checks
     const portfolio = await this.getPortfolio();
@@ -105,7 +108,7 @@ export class SaturnAgent {
     // Step 4: Run all safety checks (throws SafetyError on failure)
     this.safety.validateSwap(
       quoteResult,
-      gasEstimate,
+      gasResponse,
       portfolio,
       tokenIn,
       amount
@@ -134,8 +137,8 @@ export class SaturnAgent {
       txHash: result.txHash,
       tokenIn,
       tokenOut,
-      amountIn: amount,
-      amountOut: quoteResult.amountOut,
+      amountIn: quoteResult.quote.amountIn,
+      amountOut: quoteResult.quote.amountOut,
       status: result.status,
     };
   }

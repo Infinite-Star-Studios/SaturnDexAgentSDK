@@ -2,9 +2,9 @@ import {
   SafetyConfig,
   DEFAULT_SAFETY_CONFIG,
   QuoteResponse,
-  GasEstimate,
+  GasResponse,
   PortfolioResponse,
-} from "./types";
+} from "./types.js";
 
 /** Validation error with a human-readable reason. */
 export class SafetyError extends Error {
@@ -35,12 +35,15 @@ export class SafetyGuard {
 
   /**
    * Check that price impact is within acceptable bounds.
+   * priceImpact comes as "3.3986%" from the API.
    */
   validatePriceImpact(quote: QuoteResponse): void {
-    if (quote.priceImpact > this.config.maxPriceImpact) {
+    const impact = parseFloat(quote.priceImpact);
+    if (isNaN(impact)) return;
+    if (impact > this.config.maxPriceImpact) {
       throw new SafetyError(
         "maxPriceImpact",
-        `Price impact ${quote.priceImpact}% exceeds max ${this.config.maxPriceImpact}%`
+        `Price impact ${impact}% exceeds max ${this.config.maxPriceImpact}%`
       );
     }
   }
@@ -65,8 +68,8 @@ export class SafetyGuard {
     tokenIn: string,
     amount: number
   ): void {
-    const balance = portfolio.balances.find((b) => b.symbol === tokenIn);
-    const available = balance ? balance.amount : 0;
+    const balance = portfolio.balances.fungible.find((b) => b.symbol === tokenIn);
+    const available = balance ? parseFloat(balance.amount) : 0;
 
     if (available < amount) {
       throw new SafetyError(
@@ -80,22 +83,23 @@ export class SafetyGuard {
    * Check that the wallet has enough KCAL to cover gas,
    * accounting for the KCAL reserve.
    */
-  validateGas(portfolio: PortfolioResponse, gasEstimate: GasEstimate): void {
-    const kcalBalance =
-      portfolio.balances.find((b) => b.symbol === "KCAL")?.amount ?? 0;
-    const required = gasEstimate.estimatedKCAL + this.config.minKcalReserve;
+  validateGas(portfolio: PortfolioResponse, gasResponse: GasResponse): void {
+    const kcalBalance = portfolio.balances.fungible.find((b) => b.symbol === "KCAL");
+    const available = kcalBalance ? parseFloat(kcalBalance.amount) : 0;
+    const estimatedGas = parseFloat(gasResponse.gas.estimatedKCAL);
+    const required = estimatedGas + this.config.minKcalReserve;
 
-    if (kcalBalance < required) {
+    if (available < required) {
       throw new SafetyError(
         "insufficientGas",
-        `Insufficient KCAL for gas: have ${kcalBalance}, need ${required} (${gasEstimate.estimatedKCAL} gas + ${this.config.minKcalReserve} reserve)`
+        `Insufficient KCAL for gas: have ${available}, need ${required} (${estimatedGas} gas + ${this.config.minKcalReserve} reserve)`
       );
     }
   }
 
   /**
-   * Ensure we're not swapping the entire balance of a token,
-   * leaving nothing for gas if the token is KCAL.
+   * Ensure we're not swapping the entire KCAL balance,
+   * leaving nothing for gas.
    */
   validateNotEntireBalance(
     portfolio: PortfolioResponse,
@@ -103,9 +107,9 @@ export class SafetyGuard {
     amount: number
   ): void {
     if (tokenIn === "KCAL") {
-      const kcalBalance =
-        portfolio.balances.find((b) => b.symbol === "KCAL")?.amount ?? 0;
-      if (amount >= kcalBalance) {
+      const kcalBalance = portfolio.balances.fungible.find((b) => b.symbol === "KCAL");
+      const available = kcalBalance ? parseFloat(kcalBalance.amount) : 0;
+      if (amount >= available) {
         throw new SafetyError(
           "entireKcalBalance",
           `Cannot swap entire KCAL balance — must reserve KCAL for gas`
@@ -119,7 +123,7 @@ export class SafetyGuard {
    */
   validateSwap(
     quote: QuoteResponse,
-    gasEstimate: GasEstimate,
+    gasResponse: GasResponse,
     portfolio: PortfolioResponse,
     tokenIn: string,
     amount: number
@@ -127,7 +131,7 @@ export class SafetyGuard {
     this.validatePriceImpact(quote);
     this.validateFees(quote);
     this.validateBalance(portfolio, tokenIn, amount);
-    this.validateGas(portfolio, gasEstimate);
+    this.validateGas(portfolio, gasResponse);
     this.validateNotEntireBalance(portfolio, tokenIn, amount);
   }
 }

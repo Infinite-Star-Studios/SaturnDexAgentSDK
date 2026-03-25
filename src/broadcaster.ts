@@ -1,4 +1,4 @@
-import { NetworkConfig } from "./types";
+import { NetworkConfig } from "./types.js";
 
 /** Broadcast result with transaction hash and confirmation status. */
 export interface BroadcastResult {

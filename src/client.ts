@@ -1,12 +1,19 @@
 import {
   NetworkConfig,
   TokenInfo,
-  TokenPrice,
+  TokenListResponse,
+  TokenSingleResponse,
+  PriceEntry,
+  PricesResponse,
   QuoteResponse,
-  GasEstimate,
+  GasResponse,
   SwapResponse,
   PortfolioResponse,
-} from "./types";
+  PoolsResponse,
+  HealthResponse,
+  NftsListResponse,
+  NftSingleResponse,
+} from "./types.js";
 
 /**
  * Rate limiter that enforces max requests per minute.
@@ -35,13 +42,13 @@ class RateLimiter {
 
 /**
  * HTTP client for the Saturn Alpha API.
- * Handles quotes, swaps, token data, gas estimates, and portfolio queries.
+ * Handles quotes, swaps, token data, gas estimates, portfolio, pools, and NFTs.
  */
 export class SaturnClient {
   private config: NetworkConfig;
   private rateLimiter: RateLimiter;
   private tokenCache: { data: TokenInfo[]; timestamp: number } | null = null;
-  private priceCache: { data: TokenPrice[]; timestamp: number } | null = null;
+  private priceCache: { data: PriceEntry[]; timestamp: number } | null = null;
 
   constructor(config: NetworkConfig, maxRequestsPerMinute = 120) {
     this.config = config;
@@ -59,37 +66,65 @@ export class SaturnClient {
     return res.json() as Promise<T>;
   }
 
-  /**
-   * GET /tokens — fetch token registry.
-   * Cached for 60 seconds.
-   */
+  // ── Health ──
+
+  /** GET /health */
+  async getHealth(): Promise<HealthResponse> {
+    return this.fetch<HealthResponse>("/health");
+  }
+
+  // ── Tokens ──
+
+  /** GET /tokens — full response with count and knownSymbols */
+  async getTokensResponse(): Promise<TokenListResponse> {
+    return this.fetch<TokenListResponse>("/tokens");
+  }
+
+  /** GET /tokens — token list only (cached 60s) */
   async getTokens(): Promise<TokenInfo[]> {
     const now = Date.now();
     if (this.tokenCache && now - this.tokenCache.timestamp < 60_000) {
       return this.tokenCache.data;
     }
-    const data = await this.fetch<TokenInfo[]>("/tokens");
-    this.tokenCache = { data, timestamp: now };
-    return data;
+    const resp = await this.getTokensResponse();
+    this.tokenCache = { data: resp.tokens, timestamp: now };
+    return resp.tokens;
   }
 
-  /**
-   * GET /prices — fetch current token prices.
-   * Cached for 30 seconds.
-   */
-  async getPrices(): Promise<TokenPrice[]> {
+  /** GET /tokens/:symbol — single token lookup */
+  async getToken(symbol: string): Promise<TokenSingleResponse> {
+    return this.fetch<TokenSingleResponse>(`/tokens/${symbol}`);
+  }
+
+  /** Lookup a token's decimals from the cached registry. */
+  async getTokenDecimals(symbol: string): Promise<number> {
+    const tokens = await this.getTokens();
+    const token = tokens.find((t) => t.symbol === symbol);
+    if (!token) throw new Error(`Unknown token: ${symbol}`);
+    return token.decimals;
+  }
+
+  // ── Prices ──
+
+  /** GET /prices — full response */
+  async getPricesResponse(): Promise<PricesResponse> {
+    return this.fetch<PricesResponse>("/prices");
+  }
+
+  /** GET /prices — price list only (cached 30s) */
+  async getPrices(): Promise<PriceEntry[]> {
     const now = Date.now();
     if (this.priceCache && now - this.priceCache.timestamp < 30_000) {
       return this.priceCache.data;
     }
-    const data = await this.fetch<TokenPrice[]>("/prices");
-    this.priceCache = { data, timestamp: now };
-    return data;
+    const resp = await this.getPricesResponse();
+    this.priceCache = { data: resp.prices, timestamp: now };
+    return resp.prices;
   }
 
-  /**
-   * GET /quote — get a swap quote without executing.
-   */
+  // ── Quote ──
+
+  /** GET /quote — get a swap quote without executing */
   async getQuote(
     tokenIn: string,
     tokenOut: string,
@@ -100,16 +135,23 @@ export class SaturnClient {
     );
   }
 
-  /**
-   * GET /gas — estimate gas for a swap operation.
-   */
-  async getGasEstimate(hops: number): Promise<GasEstimate> {
-    return this.fetch<GasEstimate>(`/gas?operation=swap&hops=${hops}`);
+  // ── Gas ──
+
+  /** GET /gas — estimate gas for an operation */
+  async getGasEstimate(
+    operation = "swap",
+    hops?: number
+  ): Promise<GasResponse> {
+    const params =
+      hops !== undefined
+        ? `/gas?operation=${operation}&hops=${hops}`
+        : `/gas?operation=${operation}`;
+    return this.fetch<GasResponse>(params);
   }
 
-  /**
-   * GET /swap — build an unsigned swap transaction.
-   */
+  // ── Swap ──
+
+  /** GET /swap — build an unsigned swap transaction */
   async getSwapTransaction(
     address: string,
     tokenIn: string,
@@ -122,22 +164,39 @@ export class SaturnClient {
     );
   }
 
-  /**
-   * GET /portfolio — get wallet balances.
-   */
+  // ── Portfolio ──
+
+  /** GET /portfolio — get wallet balances, stake, and NFTs */
   async getPortfolio(address: string): Promise<PortfolioResponse> {
     return this.fetch<PortfolioResponse>(`/portfolio?address=${address}`);
   }
 
-  /**
-   * Lookup a token's decimals from the cached registry.
-   */
-  async getTokenDecimals(symbol: string): Promise<number> {
-    const tokens = await this.getTokens();
-    const token = tokens.find((t) => t.symbol === symbol);
-    if (!token) throw new Error(`Unknown token: ${symbol}`);
-    return token.decimals;
+  // ── Pools ──
+
+  /** GET /pools — list all liquidity pools */
+  async getPools(): Promise<PoolsResponse> {
+    return this.fetch<PoolsResponse>("/pools");
   }
+
+  // ── NFTs ──
+
+  /** GET /nfts — list NFTs with pagination */
+  async getNfts(
+    symbol: string,
+    limit = 50,
+    offset = 0
+  ): Promise<NftsListResponse> {
+    return this.fetch<NftsListResponse>(
+      `/nfts?symbol=${symbol}&limit=${limit}&offset=${offset}`
+    );
+  }
+
+  /** GET /nfts/:id — get a single NFT */
+  async getNft(symbol: string, id: string): Promise<NftSingleResponse> {
+    return this.fetch<NftSingleResponse>(`/nfts/${symbol}/${id}`);
+  }
+
+  // ── Cache ──
 
   /** Invalidate all caches. */
   clearCache(): void {
