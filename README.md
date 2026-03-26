@@ -1,6 +1,6 @@
 # Saturn Agent SDK
 
-TypeScript SDK for AI agents to autonomously swap tokens on the [Phantasma](https://phantasma.io) blockchain via the [Saturn DEX](https://saturnx.cc) — no browser or PhantasmaLink required.
+TypeScript SDK for AI agents to autonomously swap tokens on the [Phantasma](https://phantasma.info/) blockchain via the [Saturn DEX](https://www.saturnx.cc/) — no browser or PhantasmaLink required.
 
 ## What It Does
 
